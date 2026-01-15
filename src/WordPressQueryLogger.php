@@ -7,7 +7,7 @@
  * This allows debugging plugins like Query Monitor to display Doctrine queries
  */
 
-namespace Tangible\Doctrine\Database;
+namespace Tangible\Doctrine;
 
 use Doctrine\DBAL\Driver as DriverInterface;
 use Doctrine\DBAL\Driver\Middleware as MiddlewareInterface;

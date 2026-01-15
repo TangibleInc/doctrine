@@ -6,7 +6,7 @@
  * Factory for creating Doctrine EntityManager instances
  */
 
-namespace Tangible\Doctrine\Database;
+namespace Tangible\Doctrine;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
@@ -15,9 +15,9 @@ use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
 use Symfony\Component\Serializer\Serializer;
 
-use Tangible\Doctrine\Database\NamingStrategy;
-use Tangible\Doctrine\Database\SnakeCaseObjectNormalizer;
-use Tangible\Doctrine\Database\WordPressQueryLogger;
+use Tangible\Doctrine\NamingStrategy;
+use Tangible\Doctrine\SnakeCaseObjectNormalizer;
+use Tangible\Doctrine\WordPressQueryLogger;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
 
 class EntityManagerFactory {

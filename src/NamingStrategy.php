@@ -1,6 +1,6 @@
 <?php declare( strict_types=1 );
 
-namespace Tangible\Doctrine\Database;
+namespace Tangible\Doctrine;
 
 use Doctrine\ORM\Mapping\NamingStrategy as INamingStrategy;
 use Doctrine\ORM\Mapping\UnderscoreNamingStrategy;

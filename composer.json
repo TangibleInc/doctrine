@@ -13,7 +13,7 @@
             "name": "Team Tangible"
         }
     ],
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "require": {
         "doctrine/migrations": "~3.9",
         "doctrine/orm": "~3.5.3",

@@ -1,6 +1,6 @@
 <?php declare( strict_types=1 );
 
-namespace Tangible\Doctrine\Database;
+namespace Tangible\Doctrine;
 
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
