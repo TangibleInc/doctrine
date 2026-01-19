@@ -15,6 +15,7 @@
   ],
   "minimum-stability": "stable",
   "require": {
+    "php": ">=8.2",
     "doctrine/migrations": "~3.9",
     "doctrine/orm": "~3.5.3",
     "doctrine/dbal": "~3.8",
