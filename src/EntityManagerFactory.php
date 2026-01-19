@@ -34,7 +34,7 @@ class EntityManagerFactory
         // Setup Doctrine
         $paths = $config['entity_paths'] ?? [__DIR__.'/../Entity/'];
         $isDevMode = $dbConfig['dev_mode'] ?? false;
-        $plugin_slug = isset($config['plugin_slug']) ? $config['plugin_slug'] : 'tangible';
+        $plugin_slug = $config['plugin_slug'] ?? 'tangible';
 
         // Set proxy directory - use a writable location
         $defaultProxyDir = __DIR__.'/../../var/doctrine_proxies';
