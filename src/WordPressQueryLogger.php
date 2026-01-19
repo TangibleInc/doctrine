@@ -56,14 +56,14 @@ class WordPressQueryLogger implements MiddlewareInterface
                                 $this->sql = $sql;
                             }
 
-                            public function bindValue($param, $value, $type = null): void
+                            public function bindValue($param, $value, $type = ParameterType::STRING): bool
                             {
-                                $this->statement->bindValue($param, $value, $type);
+                                return $this->statement->bindValue($param, $value, $type);
                             }
 
-                            public function bindParam($param, &$variable, $type = null, $length = null): void
+                            public function bindParam($param, &$variable, $type = null, $length = null): bool
                             {
-                                $this->statement->bindParam($param, $variable, $type, $length);
+                                return $this->statement->bindParam($param, $variable, $type, $length);
                             }
 
                             public function execute($params = null): Result
@@ -201,29 +201,24 @@ class WordPressQueryLogger implements MiddlewareInterface
                         return $this->connection->lastInsertId($name);
                     }
 
-                    public function beginTransaction(): void
+                    public function beginTransaction(): bool
                     {
-                        $this->connection->beginTransaction();
+                        return $this->connection->beginTransaction();
                     }
 
-                    public function commit(): void
+                    public function commit(): bool
                     {
-                        $this->connection->commit();
+                        return $this->connection->commit();
                     }
 
-                    public function rollBack(): void
+                    public function rollBack(): bool
                     {
-                        $this->connection->rollBack();
+                        return $this->connection->rollBack();
                     }
 
                     public function getNativeConnection(): mixed
                     {
                         return $this->connection->getNativeConnection();
-                    }
-
-                    public function getServerVersion(): string
-                    {
-                        return $this->connection->getServerVersion();
                     }
 
                     public function quote($value, $type = ParameterType::STRING)
