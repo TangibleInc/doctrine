@@ -16,11 +16,11 @@ class NamingStrategy extends UnderscoreNamingStrategy implements INamingStrategy
 
     public function classToTableName(string $className): string
     {
-        return $tablePrefix.parent::classToTableName($className);
+        return $this->tablePrefix.parent::classToTableName($className);
     }
 
     public function joinTableName(string $sourceEntity, string $targetEntity, string $propertyName): string
     {
-        return $tablePrefix.parent::joinTableName($sourceEntity, $targetEntity, $propertyName);
+        return $this->tablePrefix.parent::joinTableName($sourceEntity, $targetEntity, $propertyName);
     }
 }
