@@ -57,9 +57,9 @@ class EntityManagerFactory
         $cache = null;
         if (\defined('WP_REDIS_USER_SESSION_HOST') && \extension_loaded('redis')) {
             $redis = new \Redis();
-            $redis->connect(WP_REDIS_USER_SESSION_HOST);
+            $redis->connect((string) WP_REDIS_USER_SESSION_HOST);
 
-            $redis_namespace = isset($config['redis_namespace']) ? $config['redis_namespace'] : 'dc2_'.$plugin_slug;
+            $redis_namespace = $config['redis_namespace'] ?? 'dc2_'.$plugin_slug;
             $cache = new RedisAdapter($redis, $redis_namespace);
         }
 
@@ -90,7 +90,7 @@ class EntityManagerFactory
         $connection = DriverManager::getConnection($dbConfig['connection'], $doctrineConfig);
 
         $connectionConfig = $connection->getConfiguration();
-        $connectionConfig->setSchemaAssetsFilter(function ($asset) {
+        $connectionConfig->setSchemaAssetsFilter(function ($asset) use ($naming_strategy_prefix) {
             return str_starts_with($asset, $naming_strategy_prefix) || $asset === 'doctrine_migration_versions';
         });
 
