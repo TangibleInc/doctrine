@@ -63,12 +63,23 @@ class EntityManagerFactory
             $cache = new RedisAdapter($redis, $redis_namespace);
         }
 
-        $doctrineConfig = ORMSetup::createAttributeMetadataConfiguration(
-            $paths,
-            $isDevMode,
-            $proxyDir,
-            $cache
-        );
+        $mappingType = $config['mapping_type'] ?? 'attribute';
+
+        if ($mappingType === 'xml') {
+            $doctrineConfig = ORMSetup::createXMLMetadataConfiguration(
+                $paths,
+                $isDevMode,
+                $proxyDir,
+                $cache
+            );
+        } else {
+            $doctrineConfig = ORMSetup::createAttributeMetadataConfiguration(
+                $paths,
+                $isDevMode,
+                $proxyDir,
+                $cache
+            );
+        }
 
         // Enable proxy auto-generation in dev mode and tests
         if ($isDevMode || (\defined('WP_TESTS_DIR') && WP_TESTS_DIR)) {
