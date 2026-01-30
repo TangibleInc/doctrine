@@ -12,13 +12,14 @@ require_once __DIR__ . '/../../../.phan/config.php';
 return make_phan_config(
     __DIR__ . '/..',
     array(
-        'directory_list'                  => array(
+        'directory_list' => array(
             'src',
             'vendor',
         ),
         'exclude_analysis_directory_list' => array(
             'vendor/',
         ),
-        '+stubs' => array( 'redis' )
+        '+stubs' => array( 'redis' ),
+        'baseline_path' => __DIR__ . '/baseline.php',
     )
 );

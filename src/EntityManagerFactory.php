@@ -18,13 +18,11 @@ use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
 use Symfony\Component\Serializer\Serializer;
 
-class EntityManagerFactory
-{
+class EntityManagerFactory {
     private static ?EntityManager $instance = null;
     private static ?Serializer $serializer = null;
 
-    public static function create(array $config = []): EntityManager
-    {
+    public static function create(array $config = []): EntityManager {
         // Determine if we're in development mode
         $isDev = self::isDevelopmentMode($config);
 
@@ -108,8 +106,7 @@ class EntityManagerFactory
         return new EntityManager($connection, $doctrineConfig);
     }
 
-    public static function getInstance(array $config = []): EntityManager
-    {
+    public static function getInstance(array $config = []): EntityManager {
         if (self::$instance === null) {
             self::$instance = self::create($config);
         }
@@ -117,8 +114,7 @@ class EntityManagerFactory
         return self::$instance;
     }
 
-    public static function getSerializer(): Serializer
-    {
+    public static function getSerializer(): Serializer {
         if (self::$serializer === null) {
             $encoders = [new JsonEncoder()];
             $normalizers = [
@@ -131,8 +127,7 @@ class EntityManagerFactory
         return self::$serializer;
     }
 
-    private static function isDevelopmentMode(array $config): bool
-    {
+    private static function isDevelopmentMode(array $config): bool {
         // Check explicit config first
         if (isset($config['dev_mode'])) {
             return (bool) $config['dev_mode'];
@@ -151,8 +146,7 @@ class EntityManagerFactory
         return false;
     }
 
-    private static function getDatabaseConfig(array $config, bool $isDev): array
-    {
+    private static function getDatabaseConfig(array $config, bool $isDev): array {
         if ($isDev && isset($config['dev_connection'])) {
             // Use development database configuration
             return [
@@ -175,8 +169,7 @@ class EntityManagerFactory
         ];
     }
 
-    public static function reset(): void
-    {
+    public static function reset(): void {
         self::$instance = null;
     }
 }

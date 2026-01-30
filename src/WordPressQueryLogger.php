@@ -21,53 +21,43 @@ use Doctrine\DBAL\ParameterType;
 /**
  * Middleware that logs all Doctrine queries to WordPress's query log.
  */
-class WordPressQueryLogger implements MiddlewareInterface
-{
-    public function wrap(DriverInterface $driver): DriverInterface
-    {
+class WordPressQueryLogger implements MiddlewareInterface {
+    public function wrap(DriverInterface $driver): DriverInterface {
         return new class($driver) implements DriverInterface {
             private DriverInterface $driver;
 
-            public function __construct(DriverInterface $driver)
-            {
+            public function __construct(DriverInterface $driver) {
                 $this->driver = $driver;
             }
 
-            public function connect(#[\SensitiveParameter] array $params): ConnectionInterface
-            {
+            public function connect(#[\SensitiveParameter] array $params): ConnectionInterface {
                 return new class($this->driver->connect($params)) implements ConnectionInterface {
                     private ConnectionInterface $connection;
 
-                    public function __construct(ConnectionInterface $connection)
-                    {
+                    public function __construct(ConnectionInterface $connection) {
                         $this->connection = $connection;
                     }
 
-                    public function prepare(string $sql): StatementInterface
-                    {
+                    public function prepare(string $sql): StatementInterface {
                         return new class($this->connection->prepare($sql), $sql) implements StatementInterface {
                             private StatementInterface $statement;
                             private string $sql;
                             private float $startTime;
 
-                            public function __construct(StatementInterface $statement, string $sql)
-                            {
+                            public function __construct(StatementInterface $statement, string $sql) {
                                 $this->statement = $statement;
                                 $this->sql = $sql;
                             }
 
-                            public function bindValue($param, $value, $type = ParameterType::STRING): bool
-                            {
+                            public function bindValue($param, $value, $type = ParameterType::STRING): bool {
                                 return $this->statement->bindValue($param, $value, $type);
                             }
 
-                            public function bindParam($param, &$variable, $type = null, $length = null): bool
-                            {
+                            public function bindParam($param, &$variable, $type = null, $length = null): bool {
                                 return $this->statement->bindParam($param, $variable, $type, $length);
                             }
 
-                            public function execute($params = null): Result
-                            {
+                            public function execute($params = null): Result {
                                 $this->startTime = microtime(true);
 
                                 try {
@@ -81,8 +71,7 @@ class WordPressQueryLogger implements MiddlewareInterface
                                 }
                             }
 
-                            private function logQuery(?\Throwable $exception): void
-                            {
+                            private function logQuery(?\Throwable $exception): void {
                                 global $wpdb;
 
                                 // Only log if SAVEQUERIES is enabled
@@ -136,8 +125,7 @@ class WordPressQueryLogger implements MiddlewareInterface
                         };
                     }
 
-                    public function query(string $sql): Result
-                    {
+                    public function query(string $sql): Result {
                         global $wpdb;
 
                         $startTime = microtime(true);
@@ -191,45 +179,37 @@ class WordPressQueryLogger implements MiddlewareInterface
                         }
                     }
 
-                    public function exec(string $sql): int
-                    {
+                    public function exec(string $sql): int {
                         return $this->connection->exec($sql);
                     }
 
-                    public function lastInsertId($name = null)
-                    {
+                    public function lastInsertId($name = null) {
                         return $this->connection->lastInsertId($name);
                     }
 
-                    public function beginTransaction(): bool
-                    {
+                    public function beginTransaction(): bool {
                         return $this->connection->beginTransaction();
                     }
 
-                    public function commit(): bool
-                    {
+                    public function commit(): bool {
                         return $this->connection->commit();
                     }
 
-                    public function rollBack(): bool
-                    {
+                    public function rollBack(): bool {
                         return $this->connection->rollBack();
                     }
 
-                    public function getNativeConnection(): mixed
-                    {
+                    public function getNativeConnection(): mixed {
                         return $this->connection->getNativeConnection();
                     }
 
-                    public function quote($value, $type = ParameterType::STRING)
-                    {
+                    public function quote($value, $type = ParameterType::STRING) {
                         return $this->connection->quote($value, $type);
                     }
                 };
             }
 
-            public function getDatabasePlatform()
-            {
+            public function getDatabasePlatform() {
                 return $this->driver->getDatabasePlatform();
             }
 
@@ -240,8 +220,7 @@ class WordPressQueryLogger implements MiddlewareInterface
                 return $this->driver->getSchemaManager($connection, $platform);
             }
 
-            public function getExceptionConverter(): DriverInterface\API\ExceptionConverter
-            {
+            public function getExceptionConverter(): DriverInterface\API\ExceptionConverter {
                 return $this->driver->getExceptionConverter();
             }
         };

@@ -12,10 +12,8 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
  * Custom normalizer that uses snake_case method names
  * instead of the default camelCase convention.
  */
-class SnakeCaseObjectNormalizer implements NormalizerInterface, DenormalizerInterface
-{
-    public function normalize(mixed $object, ?string $format = null, array $context = []): array
-    {
+class SnakeCaseObjectNormalizer implements NormalizerInterface, DenormalizerInterface {
+    public function normalize(mixed $object, ?string $format = null, array $context = []): array {
         if (!\is_object($object)) {
             return [];
         }
@@ -60,13 +58,11 @@ class SnakeCaseObjectNormalizer implements NormalizerInterface, DenormalizerInte
         return $data;
     }
 
-    public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
-    {
+    public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool {
         return \is_object($data);
     }
 
-    public function denormalize(mixed $data, string $type, ?string $format = null, array $context = []): object
-    {
+    public function denormalize(mixed $data, string $type, ?string $format = null, array $context = []): object {
         // Check if we should populate an existing object
         if (isset($context[AbstractNormalizer::OBJECT_TO_POPULATE])) {
             $object = $context[AbstractNormalizer::OBJECT_TO_POPULATE];
@@ -120,13 +116,11 @@ class SnakeCaseObjectNormalizer implements NormalizerInterface, DenormalizerInte
         return $object;
     }
 
-    public function supportsDenormalization(mixed $data, string $type, ?string $format = null, array $context = []): bool
-    {
+    public function supportsDenormalization(mixed $data, string $type, ?string $format = null, array $context = []): bool {
         return class_exists($type);
     }
 
-    public function getSupportedTypes(?string $format): array
-    {
+    public function getSupportedTypes(?string $format): array {
         return [
             'object' => true,
             '*' => false,
