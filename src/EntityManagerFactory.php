@@ -29,6 +29,12 @@ class EntityManagerFactory {
         // Get database configuration
         $dbConfig = self::getDatabaseConfig($config, $isDev);
 
+        // Auto-create database if it doesn't exist (enabled by default in dev mode)
+        $autoCreateDb = $config['auto_create_database'] ?? $isDev;
+        if ($autoCreateDb) {
+            self::ensureDatabaseExists($dbConfig['connection']);
+        }
+
         // Setup Doctrine
         $paths = $config['entity_paths'] ?? [__DIR__.'/../Entity/'];
         $isDevMode = $dbConfig['dev_mode'] ?? false;
@@ -171,5 +177,42 @@ class EntityManagerFactory {
 
     public static function reset(): void {
         self::$instance = null;
+    }
+
+    /**
+     * Ensure the database exists, creating it if necessary.
+     *
+     * Connects to MySQL without specifying a database and runs
+     * CREATE DATABASE IF NOT EXISTS.
+     *
+     * @param array{driver?: string, host?: string, port?: int, user?: string, password?: string, dbname?: string, charset?: string} $connectionParams
+     */
+    private static function ensureDatabaseExists(array $connectionParams): void {
+        $dbName = $connectionParams['dbname'] ?? '';
+        if ($dbName === '') {
+            return;
+        }
+
+        // Connect without database to create it
+        $tmpParams = $connectionParams;
+        unset($tmpParams['dbname']);
+
+        try {
+            $tmpConnection = DriverManager::getConnection($tmpParams);
+            $schemaManager = $tmpConnection->createSchemaManager();
+            $databases = $schemaManager->listDatabases();
+
+            if (!\in_array($dbName, $databases, true)) {
+                $schemaManager->createDatabase($dbName);
+            }
+
+            $tmpConnection->close();
+        } catch (\Exception $e) {
+            // Log but don't fail - the database might already exist
+            // or we might not have CREATE DATABASE privileges
+            if (\function_exists('error_log')) {
+                error_log('[Tangible\\Doctrine] Could not ensure database exists: '.$e->getMessage());
+            }
+        }
     }
 }

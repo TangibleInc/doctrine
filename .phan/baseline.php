@@ -9,10 +9,13 @@
  */
 return [
     // # Issue statistics:
+    // PhanAccessMethodInternal : 5 occurrences
+    // PhanAccessClassConstantInternal : 2 occurrences
     // PhanDeprecatedFunction : 2 occurrences
 
     // Currently, file_suppressions and directory_suppressions are the only supported suppressions
     'file_suppressions' => [
+        'src/MigrationRunner.php' => ['PhanAccessClassConstantInternal', 'PhanAccessMethodInternal'],
         'src/WordPressQueryLogger.php' => ['PhanDeprecatedFunction'],
     ],
     // 'directory_suppressions' => ['src/directory_name' => ['PhanIssueName1', 'PhanIssueName2']] can be manually added if needed.
