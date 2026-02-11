@@ -180,6 +180,34 @@ class EntityManagerFactory {
     }
 
     /**
+     * Clear the Doctrine metadata cache.
+     *
+     * Should be called on plugin version updates before creating a new
+     * EntityManager, so that stale entity mappings don't cause errors.
+     */
+    public static function clearMetadataCache(array $config = []): void {
+        $plugin_slug = $config['plugin_slug'] ?? 'tangible';
+
+        if (\defined('WP_REDIS_USER_SESSION_HOST') && \extension_loaded('redis')) {
+            try {
+                $redis = new \Redis();
+                $redis->connect((string) WP_REDIS_USER_SESSION_HOST);
+
+                $redis_namespace = $config['redis_namespace'] ?? 'dc2_'.$plugin_slug;
+                $cache = new RedisAdapter($redis, $redis_namespace);
+                $cache->clear();
+            } catch (\Exception $e) {
+                if (\function_exists('error_log')) {
+                    error_log('[Tangible\\Doctrine] Could not clear metadata cache: '.$e->getMessage());
+                }
+            }
+        }
+
+        // Reset the singleton so the next getInstance() rebuilds with fresh metadata
+        self::reset();
+    }
+
+    /**
      * Ensure the database exists, creating it if necessary.
      *
      * Connects to MySQL without specifying a database and runs
