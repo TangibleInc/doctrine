@@ -41,22 +41,7 @@ class EntityManagerFactory {
         $plugin_slug = $config['plugin_slug'] ?? 'tangible';
 
         // Set proxy directory - use a writable location
-        $defaultProxyDir = __DIR__.'/../../var/doctrine_proxies';
-        $proxyDir = $config['proxy_dir'] ?? $defaultProxyDir;
-
-        // Ensure proxy directory exists and is writable
-        if (!is_dir($proxyDir)) {
-            if (!@mkdir($proxyDir, 0755, true)) {
-                // Fallback to temp dir if we can't create in var/
-                $proxyDir = sys_get_temp_dir().'/'.$plugin_slug.'_doctrine_proxies';
-                @mkdir($proxyDir, 0755, true);
-            }
-        }
-
-        // Ensure writable
-        if (!is_writable($proxyDir)) {
-            @chmod($proxyDir, 0755);
-        }
+        $proxyDir = $config['proxy_dir'] ?? self::resolveProxyDir($plugin_slug);
 
         $cache = null;
         if (\defined('WP_REDIS_USER_SESSION_HOST') && \extension_loaded('redis')) {
@@ -205,6 +190,35 @@ class EntityManagerFactory {
 
         // Reset the singleton so the next getInstance() rebuilds with fresh metadata
         self::reset();
+    }
+
+    /**
+     * Resolve a writable proxy directory, trying candidates in order:
+     * 1. WP_CONTENT_DIR/cache/{slug}/doctrine_proxies (reliable on all WP hosts)
+     * 2. System temp directory (always writable, but ephemeral)
+     */
+    private static function resolveProxyDir(string $pluginSlug): string {
+        $candidates = [];
+
+        if (\defined('WP_CONTENT_DIR')) {
+            $candidates[] = WP_CONTENT_DIR.'/cache/'.$pluginSlug.'/doctrine_proxies';
+        }
+
+        $candidates[] = sys_get_temp_dir().'/'.$pluginSlug.'_doctrine_proxies';
+
+        foreach ($candidates as $dir) {
+            if (is_dir($dir) && is_writable($dir)) {
+                return $dir;
+            }
+
+            if (@mkdir($dir, 0755, true) && is_writable($dir)) {
+                return $dir;
+            }
+        }
+
+        // Last resort — sys_get_temp_dir() should always work,
+        // but if mkdir failed above, return it anyway and let Doctrine report the error.
+        return end($candidates);
     }
 
     /**
