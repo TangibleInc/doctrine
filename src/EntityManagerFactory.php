@@ -39,6 +39,7 @@ class EntityManagerFactory {
         $paths = $config['entity_paths'] ?? [__DIR__.'/../Entity/'];
         $isDevMode = $dbConfig['dev_mode'] ?? false;
         $plugin_slug = $config['plugin_slug'] ?? 'tangible';
+        $table_prefix = $config['table_prefix'] ?? '';
 
         // Set proxy directory - use a writable location
         $proxyDir = $config['proxy_dir'] ?? self::resolveProxyDir($plugin_slug);
@@ -76,7 +77,11 @@ class EntityManagerFactory {
         }
 
         // Set naming strategy
+        // $table_prefix comes from $wpdb->prefix which already includes a trailing underscore (e.g. "wp_")
         $naming_strategy_prefix = $plugin_slug.'_';
+        if (!empty($table_prefix)) {
+            $naming_strategy_prefix = $table_prefix.$naming_strategy_prefix;
+        }
         $doctrineConfig->setNamingStrategy(new NamingStrategy($naming_strategy_prefix));
 
         // Add WordPress query logger middleware if SAVEQUERIES is enabled

@@ -41,9 +41,12 @@ function register_migration_hooks(
     string $migrationsConfigPath,
 ): void {
     $runMigrations = function () use ($pluginSlug, $entityPaths, $migrationsConfigPath): void {
+        global $wpdb;
+
         $em = EntityManagerFactory::getInstance([
             'entity_paths' => $entityPaths,
             'plugin_slug' => $pluginSlug,
+            'table_prefix' => $wpdb->prefix,
         ]);
 
         $runner = new MigrationRunner($em, $migrationsConfigPath, $pluginSlug);
@@ -82,9 +85,12 @@ function create_migration_runner(
     array $entityPaths,
     string $migrationsConfigPath,
 ): MigrationRunner {
+    global $wpdb;
+
     $em = EntityManagerFactory::getInstance([
         'entity_paths' => $entityPaths,
         'plugin_slug' => $pluginSlug,
+        'table_prefix' => $wpdb->prefix,
     ]);
 
     return new MigrationRunner($em, $migrationsConfigPath, $pluginSlug);
