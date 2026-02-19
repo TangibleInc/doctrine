@@ -48,6 +48,10 @@ class MigrationRunner {
             $newMigrations = $this->getPendingMigrations();
 
             if (\count($newMigrations) === 0) {
+                // Even with no pending migrations, tables may need prefix renaming
+                // (e.g., CLI ran migrations first without the WordPress table prefix)
+                $this->ensureTablePrefix();
+
                 return [
                     'success' => true,
                     'migrations_executed' => 0,
@@ -55,6 +59,7 @@ class MigrationRunner {
             }
 
             $migrationsExecuted = $this->executeMigrations($newMigrations);
+            $this->ensureTablePrefix();
             $this->generateProxyClasses();
 
             $this->storeStatus([
@@ -195,6 +200,55 @@ class MigrationRunner {
                 new \DateTimeImmutable(),
             )
         );
+    }
+
+    /**
+     * Ensure managed tables use the correct prefix from the naming strategy.
+     *
+     * When migrations run via CLI (no WordPress prefix) and then the plugin
+     * loads in WordPress (with prefix), the tables need to be renamed.
+     * This method detects unprefixed tables and renames them.
+     */
+    private function ensureTablePrefix(): void {
+        $namingStrategy = $this->entityManager->getConfiguration()->getNamingStrategy();
+
+        if (!$namingStrategy instanceof NamingStrategy) {
+            return;
+        }
+
+        $fullPrefix = $namingStrategy->getTablePrefix();
+        $barePrefix = $this->pluginSlug.'_';
+
+        // If the full prefix equals the bare prefix, no renaming is needed
+        if ($fullPrefix === $barePrefix) {
+            return;
+        }
+
+        $connection = $this->entityManager->getConnection();
+        $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
+
+        foreach ($metadata as $classMetadata) {
+            $expectedTable = $classMetadata->getTableName();
+
+            // Derive the unprefixed name by replacing the full prefix with the bare prefix
+            if (!str_starts_with($expectedTable, $fullPrefix)) {
+                continue;
+            }
+
+            $unprefixedTable = $barePrefix.substr($expectedTable, \strlen($fullPrefix));
+
+            // Check if the old unprefixed table exists
+            $exists = (bool) $connection->fetchOne(
+                'SHOW TABLES LIKE ?',
+                [$unprefixedTable]
+            );
+
+            if ($exists) {
+                $connection->executeStatement(
+                    "RENAME TABLE `{$unprefixedTable}` TO `{$expectedTable}`"
+                );
+            }
+        }
     }
 
     private function generateProxyClasses(): void {

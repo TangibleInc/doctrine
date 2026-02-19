@@ -22,4 +22,8 @@ class NamingStrategy extends UnderscoreNamingStrategy implements INamingStrategy
     public function joinTableName(string $sourceEntity, string $targetEntity, string $propertyName): string {
         return $this->tablePrefix.parent::joinTableName($sourceEntity, $targetEntity, $propertyName);
     }
+
+    public function getTablePrefix(): string {
+        return $this->tablePrefix;
+    }
 }

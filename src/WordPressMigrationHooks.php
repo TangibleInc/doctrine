@@ -40,7 +40,7 @@ function register_migration_hooks(
     array $entityPaths,
     string $migrationsConfigPath,
 ): void {
-    $runMigrations = function () use ($pluginSlug, $entityPaths, $migrationsConfigPath): void {
+    $runMigrations = function () use ($pluginSlug, $entityPaths, $migrationsConfigPath): array {
         global $wpdb;
 
         $em = EntityManagerFactory::getInstance([
@@ -50,7 +50,8 @@ function register_migration_hooks(
         ]);
 
         $runner = new MigrationRunner($em, $migrationsConfigPath, $pluginSlug);
-        $runner->runPendingMigrations();
+
+        return $runner->runPendingMigrations();
     };
 
     // Run on plugin activation
@@ -67,8 +68,12 @@ function register_migration_hooks(
                 'plugin_slug' => $pluginSlug,
             ]);
 
-            $runMigrations();
-            update_option($pluginSlug.'_version', $version, true);
+            $result = $runMigrations();
+
+            // Only store version if migrations succeeded, so they retry on next load
+            if ($result['success']) {
+                update_option($pluginSlug.'_version', $version, true);
+            }
         }
     }, 5); // Priority 5 to run before most other plugins_loaded hooks
 }
