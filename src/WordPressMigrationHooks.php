@@ -61,7 +61,7 @@ function register_migration_hooks(
     add_action('plugins_loaded', function () use ($pluginSlug, $entityPaths, $version, $runMigrations): void {
         $storedVersion = get_option($pluginSlug.'_version');
 
-        if ($storedVersion !== $version) {
+        if (version_compare($version, $storedVersion ?: '0.0.0', 'gt')) {
             // Clear stale metadata cache before running migrations
             EntityManagerFactory::clearMetadataCache([
                 'entity_paths' => $entityPaths,
