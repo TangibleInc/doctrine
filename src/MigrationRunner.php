@@ -208,6 +208,9 @@ class MigrationRunner {
      * When migrations run via CLI (no WordPress prefix) and then the plugin
      * loads in WordPress (with prefix), the tables need to be renamed.
      * This method detects unprefixed tables and renames them.
+     *
+     * Uses the native PDO connection to bypass the TablePrefixMiddleware,
+     * since we need to operate on bare (unprefixed) table names directly.
      */
     private function ensureTablePrefix(): void {
         $namingStrategy = $this->entityManager->getConfiguration()->getNamingStrategy();
@@ -224,7 +227,8 @@ class MigrationRunner {
             return;
         }
 
-        $connection = $this->entityManager->getConnection();
+        /** @var \PDO $pdo */
+        $pdo = $this->entityManager->getConnection()->getNativeConnection();
         $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
 
         foreach ($metadata as $classMetadata) {
@@ -238,15 +242,24 @@ class MigrationRunner {
             $unprefixedTable = $barePrefix.substr($expectedTable, \strlen($fullPrefix));
 
             // Check if the old unprefixed table exists
-            $exists = (bool) $connection->fetchOne(
-                'SHOW TABLES LIKE ?',
-                [$unprefixedTable]
-            );
+            $stmt = $pdo->prepare('SHOW TABLES LIKE ?');
+            $stmt->execute([$unprefixedTable]);
+            $unprefixedExists = (bool) $stmt->fetchColumn();
 
-            if ($exists) {
-                $connection->executeStatement(
-                    "RENAME TABLE `{$unprefixedTable}` TO `{$expectedTable}`"
-                );
+            if (!$unprefixedExists) {
+                continue;
+            }
+
+            // Check if the target (prefixed) table already exists
+            $stmt = $pdo->prepare('SHOW TABLES LIKE ?');
+            $stmt->execute([$expectedTable]);
+            $prefixedExists = (bool) $stmt->fetchColumn();
+
+            if ($prefixedExists) {
+                // Both exist — drop the unprefixed duplicate
+                $pdo->exec("DROP TABLE `{$unprefixedTable}`");
+            } else {
+                $pdo->exec("RENAME TABLE `{$unprefixedTable}` TO `{$expectedTable}`");
             }
         }
     }

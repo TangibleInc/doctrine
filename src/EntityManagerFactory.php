@@ -84,12 +84,17 @@ class EntityManagerFactory {
         }
         $doctrineConfig->setNamingStrategy(new NamingStrategy($naming_strategy_prefix));
 
-        // Add WordPress query logger middleware if SAVEQUERIES is enabled
+        // Middlewares: table prefix rewriter (always) + query logger (dev only)
+        $barePrefix = $plugin_slug.'_';
+        $middlewares = [
+            new TablePrefixMiddleware($barePrefix, $naming_strategy_prefix),
+        ];
+
         if (\defined('SAVEQUERIES') && SAVEQUERIES) {
-            $doctrineConfig->setMiddlewares([
-                new WordPressQueryLogger(),
-            ]);
+            $middlewares[] = new WordPressQueryLogger();
         }
+
+        $doctrineConfig->setMiddlewares($middlewares);
 
         // Create connection
         $connection = DriverManager::getConnection($dbConfig['connection'], $doctrineConfig);
