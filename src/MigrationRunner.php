@@ -115,7 +115,7 @@ class MigrationRunner {
             $newMigrations = $this->getPendingMigrations();
 
             return array_map(
-                fn (AvailableMigration $m) => (string) $m->getVersion(),
+                static fn (AvailableMigration $m) => (string) $m->getVersion(),
                 $newMigrations->getItems()
             );
         } catch (\Exception $e) {
@@ -152,7 +152,7 @@ class MigrationRunner {
         $metadataStorage = $this->dependencyFactory->getMetadataStorage();
 
         $versions = array_map(
-            fn (AvailableMigration $m) => $m->getVersion(),
+            static fn (AvailableMigration $m) => $m->getVersion(),
             $newMigrations->getItems()
         );
 

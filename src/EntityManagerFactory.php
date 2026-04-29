@@ -100,7 +100,7 @@ class EntityManagerFactory {
         $connection = DriverManager::getConnection($dbConfig['connection'], $doctrineConfig);
 
         $connectionConfig = $connection->getConfiguration();
-        $connectionConfig->setSchemaAssetsFilter(function ($asset) use ($naming_strategy_prefix) {
+        $connectionConfig->setSchemaAssetsFilter(static function ($asset) use ($naming_strategy_prefix) {
             return str_starts_with($asset, $naming_strategy_prefix) || $asset === 'doctrine_migration_versions';
         });
 

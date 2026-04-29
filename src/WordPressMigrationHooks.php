@@ -40,7 +40,7 @@ function register_migration_hooks(
     array $entityPaths,
     string $migrationsConfigPath,
 ): void {
-    $runMigrations = function () use ($pluginSlug, $entityPaths, $migrationsConfigPath): array {
+    $runMigrations = static function () use ($pluginSlug, $entityPaths, $migrationsConfigPath): array {
         global $wpdb;
 
         $em = EntityManagerFactory::getInstance([
@@ -58,7 +58,7 @@ function register_migration_hooks(
     register_activation_hook($pluginFile, $runMigrations);
 
     // Run on version update
-    add_action('plugins_loaded', function () use ($pluginSlug, $entityPaths, $version, $runMigrations): void {
+    add_action('plugins_loaded', static function () use ($pluginSlug, $entityPaths, $version, $runMigrations): void {
         $storedVersion = get_option($pluginSlug.'_version');
 
         if (version_compare($version, $storedVersion ?: '0.0.0', 'gt')) {
