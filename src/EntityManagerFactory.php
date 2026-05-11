@@ -13,6 +13,7 @@ namespace Tangible\Doctrine;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
+use Doctrine\ORM\Proxy\ProxyFactory;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
@@ -71,9 +72,17 @@ class EntityManagerFactory {
             );
         }
 
-        // Enable proxy auto-generation in dev mode and tests
+        // In dev/tests, regenerate proxies only when the file is missing
+        // or the entity has changed — not on every request. This keeps
+        // dev ergonomics (entity edits picked up automatically) while
+        // not requiring the proxy directory to be writable when valid
+        // pre-generated proxies are already present (e.g. CI runs that
+        // generate proxies on the host before mounting the volume into
+        // a container running as a different user).
         if ($isDevMode || (\defined('WP_TESTS_DIR') && WP_TESTS_DIR)) {
-            $doctrineConfig->setAutoGenerateProxyClasses(true);
+            $doctrineConfig->setAutoGenerateProxyClasses(
+                ProxyFactory::AUTOGENERATE_FILE_NOT_EXISTS_OR_CHANGED,
+            );
         }
 
         // Set naming strategy
