@@ -32,6 +32,12 @@ namespace Tangible\Doctrine;
  * @param string $version Current plugin version
  * @param string[] $entityPaths Paths to Doctrine entity directories
  * @param string $migrationsConfigPath Path to migrations.php config file
+ * @param string[] $excludedTables Bare table names (without prefix) that share the plugin prefix
+ *                                 but are owned by another component. Hidden from Doctrine's
+ *                                 schema introspection so migration:diff will not emit DROPs.
+ * @param array<callable():void> $initializers Callbacks run before Doctrine migrations on activation and
+ *                                             version bump. Use for framework-bootstrap SQL (e.g. tangible-ddd's
+ *                                             install_tables). Must be idempotent (CREATE TABLE IF NOT EXISTS).
  */
 function register_migration_hooks(
     string $pluginFile,
@@ -39,17 +45,20 @@ function register_migration_hooks(
     string $version,
     array $entityPaths,
     string $migrationsConfigPath,
+    array $excludedTables = [],
+    array $initializers = [],
 ): void {
-    $runMigrations = static function () use ($pluginSlug, $entityPaths, $migrationsConfigPath): array {
+    $runMigrations = static function () use ($pluginSlug, $entityPaths, $migrationsConfigPath, $excludedTables, $initializers): array {
         global $wpdb;
 
         $em = EntityManagerFactory::getInstance([
             'entity_paths' => $entityPaths,
             'plugin_slug' => $pluginSlug,
             'table_prefix' => $wpdb->prefix,
+            'excluded_tables' => $excludedTables,
         ]);
 
-        $runner = new MigrationRunner($em, $migrationsConfigPath, $pluginSlug);
+        $runner = new MigrationRunner($em, $migrationsConfigPath, $pluginSlug, $initializers);
 
         return $runner->runPendingMigrations();
     };
@@ -84,11 +93,15 @@ function register_migration_hooks(
  * @param string $pluginSlug Plugin slug for option names and table prefixes
  * @param string[] $entityPaths Paths to Doctrine entity directories
  * @param string $migrationsConfigPath Path to migrations.php config file
+ * @param string[] $excludedTables Bare table names hidden from Doctrine schema introspection
+ * @param array<callable():void> $initializers Callbacks run before Doctrine migrations. Must be idempotent.
  */
 function create_migration_runner(
     string $pluginSlug,
     array $entityPaths,
     string $migrationsConfigPath,
+    array $excludedTables = [],
+    array $initializers = [],
 ): MigrationRunner {
     global $wpdb;
 
@@ -96,7 +109,8 @@ function create_migration_runner(
         'entity_paths' => $entityPaths,
         'plugin_slug' => $pluginSlug,
         'table_prefix' => $wpdb->prefix,
+        'excluded_tables' => $excludedTables,
     ]);
 
-    return new MigrationRunner($em, $migrationsConfigPath, $pluginSlug);
+    return new MigrationRunner($em, $migrationsConfigPath, $pluginSlug, $initializers);
 }

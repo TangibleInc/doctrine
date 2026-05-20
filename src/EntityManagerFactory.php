@@ -108,9 +108,27 @@ class EntityManagerFactory {
         // Create connection
         $connection = DriverManager::getConnection($dbConfig['connection'], $doctrineConfig);
 
+        // Tables in 'excluded_tables' share our prefix but are owned by another
+        // component (e.g. the tangible-ddd framework installs its own tables via
+        // raw SQL). Hide them from schema introspection so migration:diff does
+        // not emit DROP TABLE for unmapped tables.
+        $excluded_tables = $config['excluded_tables'] ?? [];
+        $excluded_full_names = array_map(
+            static fn (string $bare_name): string => $naming_strategy_prefix.$bare_name,
+            $excluded_tables,
+        );
+
         $connectionConfig = $connection->getConfiguration();
-        $connectionConfig->setSchemaAssetsFilter(static function ($asset) use ($naming_strategy_prefix) {
-            return str_starts_with($asset, $naming_strategy_prefix) || $asset === 'doctrine_migration_versions';
+        $connectionConfig->setSchemaAssetsFilter(static function ($asset) use ($naming_strategy_prefix, $excluded_full_names) {
+            if ($asset === 'doctrine_migration_versions') {
+                return true;
+            }
+
+            if (!str_starts_with($asset, $naming_strategy_prefix)) {
+                return false;
+            }
+
+            return !\in_array($asset, $excluded_full_names, true);
         });
 
         return new EntityManager($connection, $doctrineConfig);

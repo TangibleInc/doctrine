@@ -24,10 +24,14 @@ class MigrationRunner {
     private DependencyFactory $dependencyFactory;
     private string $pluginSlug;
 
+    /**
+     * @param callable():void[] $initializers
+     */
     public function __construct(
         private EntityManager $entityManager,
         private string $migrationsConfigPath,
         string $pluginSlug = 'tangible',
+        private array $initializers = [],
     ) {
         $this->pluginSlug = $pluginSlug;
 
@@ -43,6 +47,7 @@ class MigrationRunner {
      */
     public function runPendingMigrations(): array {
         try {
+            $this->runInitializers();
             $this->ensureMetadataStorageExists();
 
             $newMigrations = $this->getPendingMigrations();
@@ -122,6 +127,19 @@ class MigrationRunner {
             $this->logError('Could not get pending migrations: '.$e->getMessage());
 
             return [];
+        }
+    }
+
+    /**
+     * Run framework-bootstrap callbacks before any Doctrine migration work.
+     *
+     * Used to install tables owned by other components (e.g. tangible-ddd's
+     * outbox/process tables) so they exist alongside Doctrine-managed tables.
+     * Callbacks must be idempotent (e.g. CREATE TABLE IF NOT EXISTS).
+     */
+    private function runInitializers(): void {
+        foreach ($this->initializers as $initializer) {
+            $initializer();
         }
     }
 
