@@ -185,19 +185,74 @@ class MigrationRunner {
                 $config->setTimeAllQueries(false);
 
                 $migrator->migrate($plan, $config);
-                ++$migrationsExecuted;
             } catch (\Exception $e) {
-                if ($this->isTableAlreadyExistsError($e)) {
-                    $this->logError('Migration '.$version.' tables already exist, marking as executed');
-                    $this->markMigrationAsExecuted($metadataStorage, $version);
-                    ++$migrationsExecuted;
-                } else {
+                if (!$this->isTableAlreadyExistsError($e)) {
+                    throw $e;
+                }
+
+                // A statement reported that its object already exists, so the
+                // migrator aborted partway and may have left later statements
+                // of the same migration unapplied — that is how a multi-table
+                // CREATE migration ends up half-applied yet still recorded as
+                // fully executed. Replay every statement individually, skipping
+                // only the ones that already exist, so the remainder still
+                // lands before the version is recorded. A genuine error (e.g.
+                // an ALTER against a table that was never created) still
+                // propagates instead of being silently swallowed.
+                $this->logError('Migration '.$version.' hit an "already exists" error; replaying statements idempotently');
+                $replayPlan = $planCalculator->getPlanForVersions([$version], Direction::UP);
+                $this->applyPlanIdempotently($replayPlan);
+                $this->markMigrationAsExecuted($metadataStorage, $version);
+            }
+
+            ++$migrationsExecuted;
+        }
+
+        return $migrationsExecuted;
+    }
+
+    /**
+     * Replay a migration's SQL statement-by-statement, skipping only the
+     * statements whose schema object already exists.
+     *
+     * The standard migrator runs a migration as a single abort-on-error unit,
+     * so one "already exists" on an early statement leaves the rest of that
+     * migration unapplied. Here each statement is independent: already-applied
+     * statements are skipped while the outstanding ones are completed. Assumes
+     * addSql-based migrations (the diff generator's output); declarative
+     * schema-builder migrations are not replayed here.
+     *
+     * @param \Doctrine\Migrations\Metadata\MigrationPlanList $plan
+     */
+    private function applyPlanIdempotently($plan): void {
+        $connection = $this->entityManager->getConnection();
+        $schema = $connection->createSchemaManager()->introspectSchema();
+
+        foreach ($plan->getItems() as $planItem) {
+            $migration = $planItem->getMigration();
+
+            if (\count($migration->getSql()) === 0) {
+                $migration->up($schema);
+            }
+
+            foreach ($migration->getSql() as $query) {
+                try {
+                    $connection->executeStatement(
+                        $query->getStatement(),
+                        $query->getParameters(),
+                        $query->getTypes(),
+                    );
+                } catch (\Exception $e) {
+                    if ($this->isTableAlreadyExistsError($e)) {
+                        $this->logError('Skipping already-applied statement: '.$query->getStatement());
+
+                        continue;
+                    }
+
                     throw $e;
                 }
             }
         }
-
-        return $migrationsExecuted;
     }
 
     private function isTableAlreadyExistsError(\Exception $e): bool {
@@ -274,8 +329,18 @@ class MigrationRunner {
             $prefixedExists = (bool) $stmt->fetchColumn();
 
             if ($prefixedExists) {
-                // Both exist — drop the unprefixed duplicate
-                $pdo->exec("DROP TABLE `{$unprefixedTable}`");
+                // Both exist — drop the stale unprefixed duplicate. Disable FK
+                // checks first: leftover tables can carry foreign keys between
+                // each other (e.g. item.resource_id → resource), and we drop in
+                // metadata order rather than dependency order, so a parent could
+                // be dropped before its child and raise a 1451.
+                $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+                try {
+                    $pdo->exec("DROP TABLE `{$unprefixedTable}`");
+                } finally {
+                    $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+                }
             } else {
                 $pdo->exec("RENAME TABLE `{$unprefixedTable}` TO `{$expectedTable}`");
             }

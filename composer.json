@@ -11,6 +11,14 @@
       "src/WordPressMigrationHooks.php"
     ]
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Tangible\\Doctrine\\Tests\\": "./tests"
+    }
+  },
+  "scripts": {
+    "test": "phpunit"
+  },
   "authors": [
     {
       "name": "Team Tangible"
