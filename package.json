@@ -1,7 +1,7 @@
 {
   "name": "@tangible/doctrine",
   "description": "The Tangible Doctrine helper.",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "author": "Team Tangible",
   "license": "GPL-2.0-only",
   "main": "app/main.js",
