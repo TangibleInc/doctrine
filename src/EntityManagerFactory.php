@@ -20,7 +20,12 @@ use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
 use Symfony\Component\Serializer\Serializer;
 
 class EntityManagerFactory {
-    private static ?EntityManager $instance = null;
+    /** @var array<string, EntityManager> EntityManagers keyed by plugin_slug. */
+    private static array $instances = [];
+
+    /** Slug of the first-seeded instance — the default for no-arg getInstance(). */
+    private static ?string $defaultSlug = null;
+
     private static ?Serializer $serializer = null;
 
     public static function create(array $config = []): EntityManager {
@@ -134,12 +139,49 @@ class EntityManagerFactory {
         return new EntityManager($connection, $doctrineConfig);
     }
 
+    /**
+     * Get (or lazily create) the EntityManager for a plugin, keyed by
+     * `plugin_slug`. Multiple Doctrine-using plugins coexist in one WordPress
+     * process, so a single shared instance would make the second plugin query
+     * the first plugin's tables. Each plugin seeds its own instance at
+     * plugins_loaded by calling this with its config (incl. plugin_slug).
+     *
+     * A no-arg call returns the first-seeded ("default") instance, preserving
+     * the previous single-instance behaviour for callers without plugin context.
+     */
     public static function getInstance(array $config = []): EntityManager {
-        if (self::$instance === null) {
-            self::$instance = self::create($config);
+        $slug = $config['plugin_slug'] ?? self::$defaultSlug ?? 'tangible';
+
+        if (!isset(self::$instances[$slug])) {
+            self::$instances[$slug] = self::create($config);
+            self::$defaultSlug ??= $slug;
         }
 
-        return self::$instance;
+        return self::$instances[$slug];
+    }
+
+    /**
+     * Retrieve the already-seeded EntityManager for a plugin by slug. Used by
+     * each plugin's DI container to inject the correct EntityManager into its
+     * IDoctrineAware repositories (the slug is a compile-safe constant — no
+     * runtime paths are baked into a compiled container).
+     */
+    public static function getInstanceForPlugin(string $plugin_slug): EntityManager {
+        if (isset(self::$instances[$plugin_slug])) {
+            return self::$instances[$plugin_slug];
+        }
+
+        // Not seeded under this slug. With two or more EntityManagers active,
+        // the slug is genuinely wrong and guessing would query another plugin's
+        // tables — fail loudly. With zero or one seeded there is no ambiguity:
+        // a single-Doctrine-plugin runtime, the container smoke test (seeds
+        // none, never queries), or integration tests that seed under a *_test
+        // slug. Fall back to the default/lazy instance.
+        if (\count(self::$instances) >= 2) {
+            throw new \RuntimeException(\sprintf('No EntityManager seeded for plugin "%s" while %d are active; refusing to guess. Ensure the plugin seeds its EntityManager (EntityManagerFactory::getInstance with plugin_slug) on plugins_loaded.', $plugin_slug, \count(self::$instances)));
+        }
+
+        return self::getInstance();
     }
 
     public static function getSerializer(): Serializer {
@@ -198,7 +240,8 @@ class EntityManagerFactory {
     }
 
     public static function reset(): void {
-        self::$instance = null;
+        self::$instances = [];
+        self::$defaultSlug = null;
     }
 
     /**
