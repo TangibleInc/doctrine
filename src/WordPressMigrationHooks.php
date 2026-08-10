@@ -48,7 +48,12 @@ function register_migration_hooks(
     array $excludedTables = [],
     array $initializers = [],
 ): void {
-    $runMigrations = static function () use ($pluginSlug, $entityPaths, $migrationsConfigPath, $excludedTables, $initializers): array {
+    // Only store version once migrations succeed, so they retry on next
+    // load. Recording it on the activation run too keeps the plugins_loaded
+    // version check below from re-firing on the first regular boot after
+    // activation — that re-run evicted EntityManager state mid-boot for no
+    // schema benefit.
+    $runMigrations = static function () use ($pluginSlug, $entityPaths, $migrationsConfigPath, $excludedTables, $initializers, $version): array {
         global $wpdb;
 
         $em = EntityManagerFactory::getInstance([
@@ -60,7 +65,13 @@ function register_migration_hooks(
 
         $runner = new MigrationRunner($em, $migrationsConfigPath, $pluginSlug, $initializers);
 
-        return $runner->runPendingMigrations();
+        $result = $runner->runPendingMigrations();
+
+        if ($result['success']) {
+            update_option($pluginSlug.'_version', $version, true);
+        }
+
+        return $result;
     };
 
     // Run on plugin activation
@@ -77,12 +88,7 @@ function register_migration_hooks(
                 'plugin_slug' => $pluginSlug,
             ]);
 
-            $result = $runMigrations();
-
-            // Only store version if migrations succeeded, so they retry on next load
-            if ($result['success']) {
-                update_option($pluginSlug.'_version', $version, true);
-            }
+            $runMigrations();
         }
     }, 5); // Priority 5 to run before most other plugins_loaded hooks
 }

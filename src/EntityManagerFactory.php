@@ -245,6 +245,23 @@ class EntityManagerFactory {
     }
 
     /**
+     * Evict a single plugin's EntityManager so its next getInstance()
+     * rebuilds with fresh metadata — WITHOUT touching the other plugins'
+     * instances. A global reset() here once let one plugin's version-bump
+     * migration wipe every seeded instance mid-boot; the single survivor
+     * re-seeded was then served to the other plugin by the
+     * getInstanceForPlugin() single-instance fallback, which queried the
+     * wrong table prefix.
+     */
+    public static function resetForPlugin(string $plugin_slug): void {
+        unset(self::$instances[$plugin_slug]);
+
+        if (self::$defaultSlug === $plugin_slug) {
+            self::$defaultSlug = array_key_first(self::$instances);
+        }
+    }
+
+    /**
      * Clear the Doctrine metadata cache.
      *
      * Should be called on plugin version updates before creating a new
@@ -268,8 +285,9 @@ class EntityManagerFactory {
             }
         }
 
-        // Reset the singleton so the next getInstance() rebuilds with fresh metadata
-        self::reset();
+        // Evict only this plugin's instance so its next getInstance()
+        // rebuilds with fresh metadata; other plugins keep theirs.
+        self::resetForPlugin($plugin_slug);
     }
 
     /**
