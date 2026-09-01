@@ -1,8 +1,11 @@
 {
   "name": "tangible/doctrine",
   "description": "The Tangible Doctrine helper.",
-  "type": "library",
+  "type": "jetpack-library",
   "license": "GPL-2.0-only",
+  "extra": {
+    "textdomain": "tangible-doctrine"
+  },
   "autoload": {
     "psr-4": {
       "Tangible\\Doctrine\\": "./src"
